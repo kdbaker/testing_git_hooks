@@ -1,0 +1,77 @@
+#!/bin/sh
+
+# Based on: comment by vistik on https://gist.github.com/pixelhandler/5718585
+
+# Called by "git push" after it has checked the remote status,
+# but before anything has been pushed.
+#
+# If this script exits with a non-zero status nothing will be pushed.
+#
+# Steps to install, from the root directory of your repo...
+# 1. Copy the file into your repo at `.git/hooks/pre-push`
+# 2. Set executable permissions, run `chmod +x .git/hooks/pre-push`
+#
+# Try a push to any of the protected branches, you should get a message `*** [Policy] never force push...`
+#
+# The commands below will not be allowed...
+# `git push --force origin PROTECTED_BRANCH_NAME`
+# `git push --delete origin PROTECTED_BRANCH_NAME`
+# `git push origin :PROTECTED_BRANCH_NAME`
+# `git push` on any of the protected branches
+#
+# Nor will a force push while on a protected branch be allowed...
+# `git co PROTECTED_BRANCH_NAME`
+# `git push --force origin`
+#
+# Requires git 1.8.2 or newer
+#
+# Git 1.8.2 release notes cover the new pre-push hook:
+# <https://github.com/git/git/blob/master/Documentation/RelNotes/1.8.2.txt>
+#
+# See Sample pre-push script:
+# <https://github.com/git/git/blob/87c86dd14abe8db7d00b0df5661ef8cf147a72a3/templates/hooks--pre-push.sample>
+
+protected_branches=( master release-candidate )
+for i in "${protected_branches[@]}"
+do
+
+    protected_branch=$i
+
+    policy='[Policy] Never push, force push or delete the '$protected_branch' branch! (Prevented with pre-push hook.)'
+
+    current_branch=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+
+    push_command=$(ps -ocommand= -p $PPID)
+
+    is_destructive='force|delete|\-f'
+
+    will_remove_protected_branch=':'$protected_branch
+
+    do_exit(){
+      echo $policy
+      exit 1
+    }
+
+    if [[ $push_command =~ $is_destructive ]] && [ $current_branch = $protected_branch ]; then
+      do_exit
+    fi
+
+    if [[ $push_command =~ $is_destructive ]] && [[ $push_command =~ $protected_branch ]]; then
+      do_exit
+    fi
+
+    if [[ $push_command =~ $will_remove_protected_branch ]]; then
+      do_exit
+    fi
+
+    # This check makes sure that you dont make a *git push* while on master
+    # This check is very strict so you might want to consider removeing it if it does not fit your purpose
+    if [[ $protected_branch == $current_branch ]]; then
+      do_exit
+    fi
+
+done
+
+unset do_exit
+
+exit 0

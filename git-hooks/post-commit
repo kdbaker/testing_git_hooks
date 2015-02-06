@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+
+# This post-commit hook will remind the dev about how to skip the ci build
+
+# Steps to install, from the root directory of your repo...
+# 1. Copy the file into your repo at `.git/hooks/post-push`
+# 2. Set executable permissions, run `chmod +x .git/hooks/post-push`
+
+def current_branch()
+  branches = `git branch --no-color`.split(/\n/)
+  current = branches.select{ |b| b =~ /\s*\*/ }.first
+  current.gsub(/[\*\s]/, "")
+end
+
+branch = current_branch
+
+if ( branch.downcase.start_with?("feature/") || branch.downcase.start_with?("hotfix-"))
+  puts
+  puts "    Looks like you are on a feature or hotfix branch."
+  puts "    If you would like to skip the ci from building when your push to remote"
+  puts "    be sure your commit message has '[skip ci]' in it."
+  puts "    You can update your commit message by running the command: 'git commit --amend'"
+  puts
+
+  exit 1
+end
