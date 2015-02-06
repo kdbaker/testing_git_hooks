@@ -1,4 +1,4 @@
-### To install git hooks:
+## To install git hooks:
 
 	sh git-hooks/install-git-hooks.sh
 
